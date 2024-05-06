@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "the-west-account-maker"
+version = "0.1.0"
+description = ""
+authors = ["MariusSilviuHriscu <hriscumarius65536@gmail.com>"]
+readme = "README.md"
+packages = [{include = "the_west_account_maker"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = {extras = ["socks"], version = "^2.31.0"}
+bs4 = "^0.0.2"
+lxml = "^5.2.1"
+1secmail = "^1.2.0"
+sqlalchemy = "^2.0.30"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
