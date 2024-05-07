@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import string
 
 from account_saver import AccountSaverManager
+from accounts_models import Account_db
 
 class UnsuccessfullRegistrationException(Exception):
     """Exception raised when registration is unsuccessful."""
@@ -198,9 +199,9 @@ class WestRegistrationRequest:
             raise UnsuccessfullRegistrationException(f'Could not register using  {name} : {password}')
 
         self.usable_email = False
-        self.account_saver.save_account(account=Account(name=name, password=password))
+        account_saver.save_account(account = Account_db(name=name, password=password,email = self.email))
         confirmer.confirm(email=self.email)
-        self.account_saver.mark_account_as_activated(account_name=name)
+        account_saver.mark_account_as_activated(account_name=name)
 
 
     @staticmethod
@@ -257,7 +258,8 @@ class WestRegistration:
         try:
             success_status = self.current_registration_request.register(name=account.name,
                                                                         password=account.password,
-                                                                        confirmer=self.confirmer
+                                                                        confirmer=self.confirmer,
+                                                                        account_saver = self.account_saver
                                                                         )
             self.refresh_registration_request()
             print(f'Successfully registered the account {account.name} with password {account.password} status : {success_status}')

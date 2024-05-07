@@ -6,7 +6,7 @@ from sqlalchemy import String
 Base = declarative_base()
 
 
-class Account(Base):
+class Account_db(Base):
     __tablename__ = "accounts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
