@@ -8,6 +8,8 @@ import string
 from account_saver import AccountSaverManager
 from accounts_models import Account_db
 
+from requests_handler import RequestsHandler
+
 class UnsuccessfullRegistrationException(Exception):
     """Exception raised when registration is unsuccessful."""
     pass
@@ -63,7 +65,7 @@ def extract_href(html_str: str) -> str:
 class WestEmailConfirmer:
     """Class for confirming emails for The West registration."""
 
-    def __init__(self, client: secmail.Client):
+    def __init__(self, client: secmail.Client , requests_handler : RequestsHandler):
         """
         Initialize a WestEmailConfirmer object.
 
@@ -71,6 +73,7 @@ class WestEmailConfirmer:
             client (secmail.Client): The client used for accessing email services.
         """
         self.client = client
+        self.handler = requests_handler
 
     def get_emails(self, email: str) -> list[secmail.Inbox]:
         """
@@ -94,7 +97,7 @@ class WestEmailConfirmer:
         Raises:
             ConfirmationEmailException: If the confirmation email cannot be processed.
         """
-        result = requests.get(accept_url)
+        result = self.handler.get(accept_url)
         if result.status_code != 200:
             raise ConfirmationEmailException('Could not activate account ! ')
 
@@ -134,7 +137,7 @@ class WestEmailConfirmer:
 class WestRegistrationRequest:
     """Class representing a registration request for The West."""
 
-    def __init__(self, email: str):
+    def __init__(self, email: str , requests_handler : RequestsHandler):
         """
         Initialize a WestRegistrationRequest object.
 
@@ -142,6 +145,7 @@ class WestRegistrationRequest:
             email (str): The email address to be used for registration.
         """
         self.email = email
+        self.handler = requests_handler
         self.usable_email = True
 
     def try_to_register(self, username: str, email: str, password: str) -> bool:
@@ -165,12 +169,9 @@ class WestRegistrationRequest:
             'password_confirm': f'{password}',
             'friendsdata': []
         }
-        response = requests.post('https://www.the-west.ro/index.php?page=register&ajax=registration&locale=ro_RO&world=0',
-                                 data=payload,
-                                 headers={"User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36',
-                                          'X-Requested-With': 'XMLHttpRequest'
-                                          }
-                                 )
+        response = self.handler.post('https://www.the-west.ro/index.php?page=register&ajax=registration&locale=ro_RO&world=0',
+                                 params = payload
+                                     )
         if response.json().get('success', '') != "Înregistrare reușită!":
             return False
         return True
@@ -205,7 +206,7 @@ class WestRegistrationRequest:
 
 
     @staticmethod
-    def from_client(email: str) -> 'WestRegistrationRequest':
+    def from_client(email: str , handler : RequestsHandler) -> 'WestRegistrationRequest':
         """
         Create a WestRegistrationRequest instance from a client.
 
@@ -215,13 +216,14 @@ class WestRegistrationRequest:
         Returns:
             WestRegistrationRequest: The WestRegistrationRequest instance.
         """
-        return WestRegistrationRequest(email=email)
+        return WestRegistrationRequest(email=email,
+                                       requests_handler=handler)
 
 
 class WestRegistration:
     """Class for managing the registration process for The West."""
 
-    def __init__(self, client: secmail.Client):
+    def __init__(self, client: secmail.Client, handler : RequestsHandler):
         """
         Initialize a WestRegistration object.
 
@@ -229,7 +231,8 @@ class WestRegistration:
             client (secmail.Client): The client used for accessing email services.
         """
         self.client = client
-        self.confirmer = WestEmailConfirmer(client=client)
+        self.handler = handler
+        self.confirmer = WestEmailConfirmer(client=client , requests_handler = handler)
         self.account_saver = AccountSaverManager(db_url='sqlite:///accounts.db')
         self.current_registration_request = self._refresh_registration_request()
 
@@ -241,12 +244,13 @@ class WestRegistration:
             WestRegistrationRequest: The new registration request object.
         """
         new_email = self.client.random_email(amount=1)[0]
-        return WestRegistrationRequest.from_client(email=new_email)
+        return WestRegistrationRequest.from_client(email=new_email,handler=self.handler)
 
     def refresh_registration_request(self) -> None:
         """Refresh the registration request."""
         if not self.current_registration_request.usable_email:
             self.current_registration_request = self._refresh_registration_request()
+        self.handler.renew_tor_connection()
 
     def register_account(self, account: Account):
         """
