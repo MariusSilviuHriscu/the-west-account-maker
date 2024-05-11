@@ -156,3 +156,7 @@ cython_debug/
 
 #Jupyter Notebook
 .ipynb
+*.db
+*.ipynb
+*.ipynb
+*.db
