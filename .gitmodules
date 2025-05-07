@@ -1,0 +1,3 @@
+[submodule "temp-mails"]
+	path = temp-mails
+	url = https://github.com/bertigert/temp-mails.git
