@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./temp-mails/temp_mails",
+        "./temp-mails"
+    ]
+}
