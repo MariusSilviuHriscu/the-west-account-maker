@@ -9,6 +9,7 @@ from account_saver import AccountSaverManager
 from accounts_models import Account_db
 
 from requests_handler import RequestsHandler
+from email_client import Client
 
 class UnsuccessfullRegistrationException(Exception):
     """Exception raised when registration is unsuccessful."""
@@ -65,17 +66,17 @@ def extract_href(html_str: str) -> str:
 class WestEmailConfirmer:
     """Class for confirming emails for The West registration."""
 
-    def __init__(self, client: secmail.Client , requests_handler : RequestsHandler):
+    def __init__(self, client: Client , requests_handler : RequestsHandler):
         """
         Initialize a WestEmailConfirmer object.
 
         Args:
-            client (secmail.Client): The client used for accessing email services.
+            client (Client): The client used for accessing email services.
         """
         self.client = client
         self.handler = requests_handler
 
-    def get_emails(self, email: str) -> list[secmail.Inbox]:
+    def get_emails(self, email: str) -> list[dict[str, str]]:
         """
         Get the list of emails received for a specific email address.
 
@@ -85,7 +86,7 @@ class WestEmailConfirmer:
         Returns:
             list[secmail.Inbox]: The list of received emails.
         """
-        return self.client.get_inbox(address=email)
+        return self.client.get_emails(address=email)
 
     def confirm_email(self, accept_url: str) -> None:
         """
@@ -112,7 +113,7 @@ class WestEmailConfirmer:
         Returns:
             str: The HTML body of the email message.
         """
-        return self.client.get_message(address=email, message_id=email_id).html_body
+        return self.client.get_message(address=email, message_id=email_id)
 
     def confirm(self, email: str):
         """
@@ -123,11 +124,11 @@ class WestEmailConfirmer:
         """
         received_emails = self.get_emails(email=email)
         if len(received_emails) == 0:
-            inbox = self.client.await_new_message(address=email)
+            inbox = self.client.await_new_message(address=email)[0]
         else:
             inbox = received_emails[0]
 
-        if inbox.from_address.split('@')[-1] != 'the-west.net':
+        if 'the-west.net' not in inbox.get('from'):
             raise Exception('Got incorrect received email ! ')
 
         accept_url = extract_href(html_str=self.get_email_body(email=email, email_id=inbox.id))
@@ -172,6 +173,7 @@ class WestRegistrationRequest:
         response = self.handler.post('https://www.the-west.ro/index.php?page=register&ajax=registration&locale=ro_RO&world=0',
                                  params = payload
                                      )
+        print(f'Got response {response.json()}')
         if response.json().get('success', '') != "Înregistrare reușită!":
             return False
         return True
@@ -223,7 +225,7 @@ class WestRegistrationRequest:
 class WestRegistration:
     """Class for managing the registration process for The West."""
 
-    def __init__(self, client: secmail.Client, handler : RequestsHandler):
+    def __init__(self, client: Client, handler : RequestsHandler):
         """
         Initialize a WestRegistration object.
 
@@ -243,7 +245,7 @@ class WestRegistration:
         Returns:
             WestRegistrationRequest: The new registration request object.
         """
-        new_email = self.client.random_email(amount=1)[0]
+        new_email = self.client.random_email(ammount=1)[0]
         return WestRegistrationRequest.from_client(email=new_email,handler=self.handler)
 
     def refresh_registration_request(self) -> None:
@@ -271,4 +273,5 @@ class WestRegistration:
             print('Could not register this account ! ')
         except Exception as e:
             raise e
-
+        finally :
+            self.handler.renew_tor_connection()
