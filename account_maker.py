@@ -1,4 +1,3 @@
-import secmail
 import requests
 import typing
 import random
