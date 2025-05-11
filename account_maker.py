@@ -85,7 +85,7 @@ class WestEmailConfirmer:
         Returns:
             list[secmail.Inbox]: The list of received emails.
         """
-        return self.client.get_emails(address=email)
+        return self.client.get_emails(email=email)
 
     def confirm_email(self, accept_url: str) -> None:
         """
@@ -112,7 +112,7 @@ class WestEmailConfirmer:
         Returns:
             str: The HTML body of the email message.
         """
-        return self.client.get_message(address=email, message_id=email_id)
+        return self.client.get_message(adress=email, message_id=email_id)
 
     def confirm(self, email: str):
         """
@@ -123,14 +123,14 @@ class WestEmailConfirmer:
         """
         received_emails = self.get_emails(email=email)
         if len(received_emails) == 0:
-            inbox = self.client.await_new_message(address=email)[0]
+            inbox = self.client.await_new_message(adress=email)[0]
         else:
             inbox = received_emails[0]
 
         if 'the-west.net' not in inbox.get('from'):
             raise Exception('Got incorrect received email ! ')
 
-        accept_url = extract_href(html_str=self.get_email_body(email=email, email_id=inbox.id))
+        accept_url = extract_href(html_str=self.get_email_body(email=email, email_id=inbox.get('id')))
         self.confirm_email(accept_url=accept_url)
 
 
@@ -160,6 +160,7 @@ class WestRegistrationRequest:
         Returns:
             bool: True if registration is successful, False otherwise.
         """
+        print(self.email)
         payload = {
             'name': f'{username}',
             'email': f'{email}',
@@ -251,7 +252,7 @@ class WestRegistration:
         """Refresh the registration request."""
         if not self.current_registration_request.usable_email:
             self.current_registration_request = self._refresh_registration_request()
-        self.handler.renew_tor_connection()
+        self.handler.renew_connection()
 
     def register_account(self, account: Account):
         """
@@ -273,4 +274,4 @@ class WestRegistration:
         except Exception as e:
             raise e
         finally :
-            self.handler.renew_tor_connection()
+            self.handler.renew_connection()
